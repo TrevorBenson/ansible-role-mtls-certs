@@ -32,3 +32,10 @@ build/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local development files
+inventory
+ansible.cfg
+
+# Local Ansible role symlinks (for development only)
+.ansible/roles/

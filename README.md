@@ -32,51 +32,51 @@ ansible-galaxy collection install community.crypto
 
 ### Directory Configuration
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `mtls_cert_dir` | `/etc/pki/mtls` | Base certificate directory |
-| `mtls_cert_owner` | `root` | File owner |
-| `mtls_cert_group` | `root` | File group |
-| `mtls_dir_mode` | `0750` | Directory permissions |
-| `mtls_cert_mode` | `0644` | Certificate file permissions |
-| `mtls_key_mode` | `0600` | Private key permissions |
+| Variable          | Default         | Description                  |
+| ----------------- | --------------- | ---------------------------- |
+| `mtls_cert_dir`   | `/etc/pki/mtls` | Base certificate directory   |
+| `mtls_cert_owner` | `root`          | File owner                   |
+| `mtls_cert_group` | `root`          | File group                   |
+| `mtls_dir_mode`   | `0750`          | Directory permissions        |
+| `mtls_cert_mode`  | `0644`          | Certificate file permissions |
+| `mtls_key_mode`   | `0600`          | Private key permissions      |
 
 ### CA Certificate
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `mtls_ca_common_name` | `ca-root.example.com` | CA certificate CN |
-| `mtls_ca_key_size` | `4096` | CA key size (bits) |
-| `mtls_ca_validity_days` | `3650` | Validity period (10 years) |
-| `mtls_ca_digest` | `sha256` | Signature algorithm |
+| Variable                | Default               | Description                |
+| ----------------------- | --------------------- | -------------------------- |
+| `mtls_ca_common_name`   | `ca-root.example.com` | CA certificate CN          |
+| `mtls_ca_key_size`      | `4096`                | CA key size (bits)         |
+| `mtls_ca_validity_days` | `3650`                | Validity period (10 years) |
+| `mtls_ca_digest`        | `sha256`              | Signature algorithm        |
 
 ### Server Certificate
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `mtls_server_common_name` | `server.example.com` | Server certificate CN |
-| `mtls_server_key_size` | `2048` | Server key size |
-| `mtls_server_validity_days` | `397` | Validity (<=397 days) |
-| `mtls_server_san_dns` | `[]` | Additional DNS SANs |
-| `mtls_server_san_ip` | `[]` | Additional IP SANs |
-| `mtls_server_use_ansible_ip` | `true` | Auto-add host IP to SAN |
+| Variable                     | Default              | Description             |
+| ---------------------------- | -------------------- | ----------------------- |
+| `mtls_server_common_name`    | `server.example.com` | Server certificate CN   |
+| `mtls_server_key_size`       | `2048`               | Server key size         |
+| `mtls_server_validity_days`  | `397`                | Validity (<=397 days)   |
+| `mtls_server_san_dns`        | `[]`                 | Additional DNS SANs     |
+| `mtls_server_san_ip`         | `[]`                 | Additional IP SANs      |
+| `mtls_server_use_ansible_ip` | `true`               | Auto-add host IP to SAN |
 
 ### Client Certificate
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `mtls_client_common_name` | `client.example.com` | Client certificate CN |
-| `mtls_client_key_size` | `2048` | Client key size |
-| `mtls_client_validity_days` | `365` | Validity (1 year) |
+| Variable                    | Default              | Description           |
+| --------------------------- | -------------------- | --------------------- |
+| `mtls_client_common_name`   | `client.example.com` | Client certificate CN |
+| `mtls_client_key_size`      | `2048`               | Client key size       |
+| `mtls_client_validity_days` | `365`                | Validity (1 year)     |
 
 ### Generation Control
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `mtls_generate_ca` | `true` | Generate CA certificate |
-| `mtls_generate_server` | `true` | Generate server certificate |
-| `mtls_generate_client` | `true` | Generate client certificate |
-| `mtls_force_regenerate` | `false` | Force regeneration |
+| Variable                | Default | Description                 |
+| ----------------------- | ------- | --------------------------- |
+| `mtls_generate_ca`      | `true`  | Generate CA certificate     |
+| `mtls_generate_server`  | `true`  | Generate server certificate |
+| `mtls_generate_client`  | `true`  | Generate client certificate |
+| `mtls_force_regenerate` | `false` | Force regeneration          |
 
 ## Output Paths
 
@@ -168,12 +168,12 @@ molecule test
 
 ### Test Matrix
 
-| Platform | Image |
-|----------|-------|
+| Platform      | Image                                    |
+| ------------- | ---------------------------------------- |
 | Rocky Linux 8 | `geerlingguy/docker-rockylinux8-ansible` |
 | Rocky Linux 9 | `geerlingguy/docker-rockylinux9-ansible` |
-| Ubuntu 22.04 | `geerlingguy/docker-ubuntu2204-ansible` |
-| Ubuntu 24.04 | `geerlingguy/docker-ubuntu2404-ansible` |
+| Ubuntu 22.04  | `geerlingguy/docker-ubuntu2204-ansible`  |
+| Ubuntu 24.04  | `geerlingguy/docker-ubuntu2404-ansible`  |
 
 ## License
 

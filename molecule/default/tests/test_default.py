@@ -5,17 +5,20 @@ Tests infrastructure state, file permissions, and certificate attributes
 
 import pytest
 
-
 # =============================================================================
 # File Existence Tests
 # =============================================================================
 
-@pytest.mark.parametrize("path", [
-    "/etc/pki/mtls",
-    "/etc/pki/mtls/ca",
-    "/etc/pki/mtls/server",
-    "/etc/pki/mtls/client",
-])
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/etc/pki/mtls",
+        "/etc/pki/mtls/ca",
+        "/etc/pki/mtls/server",
+        "/etc/pki/mtls/client",
+    ],
+)
 def test_directories_exist(host, path):
     """Verify all required directories exist."""
     directory = host.file(path)
@@ -23,17 +26,20 @@ def test_directories_exist(host, path):
     assert directory.is_directory, f"{path} should be a directory"
 
 
-@pytest.mark.parametrize("path", [
-    "/etc/pki/mtls/ca/ca.pem",
-    "/etc/pki/mtls/ca/ca.key",
-    "/etc/pki/mtls/ca/ca.csr",
-    "/etc/pki/mtls/server/server.pem",
-    "/etc/pki/mtls/server/server.key",
-    "/etc/pki/mtls/server/server.csr",
-    "/etc/pki/mtls/client/client.pem",
-    "/etc/pki/mtls/client/client.key",
-    "/etc/pki/mtls/client/client.csr",
-])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/etc/pki/mtls/ca/ca.pem",
+        "/etc/pki/mtls/ca/ca.key",
+        "/etc/pki/mtls/ca/ca.csr",
+        "/etc/pki/mtls/server/server.pem",
+        "/etc/pki/mtls/server/server.key",
+        "/etc/pki/mtls/server/server.csr",
+        "/etc/pki/mtls/client/client.pem",
+        "/etc/pki/mtls/client/client.key",
+        "/etc/pki/mtls/client/client.csr",
+    ],
+)
 def test_files_exist(host, path):
     """Verify all required files exist."""
     file = host.file(path)
@@ -45,6 +51,7 @@ def test_files_exist(host, path):
 # File Permission Tests
 # =============================================================================
 
+
 def test_base_directory_permissions(host):
     """Verify /etc/pki/mtls has correct ownership and permissions."""
     directory = host.file("/etc/pki/mtls")
@@ -53,11 +60,14 @@ def test_base_directory_permissions(host):
     assert directory.mode == 0o750
 
 
-@pytest.mark.parametrize("path", [
-    "/etc/pki/mtls/ca",
-    "/etc/pki/mtls/server",
-    "/etc/pki/mtls/client",
-])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/etc/pki/mtls/ca",
+        "/etc/pki/mtls/server",
+        "/etc/pki/mtls/client",
+    ],
+)
 def test_cert_directory_permissions(host, path):
     """Verify certificate directories have correct permissions."""
     directory = host.file(path)
@@ -66,11 +76,14 @@ def test_cert_directory_permissions(host, path):
     assert directory.mode == 0o750, f"{path} should have mode 0750"
 
 
-@pytest.mark.parametrize("path", [
-    "/etc/pki/mtls/ca/ca.key",
-    "/etc/pki/mtls/server/server.key",
-    "/etc/pki/mtls/client/client.key",
-])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/etc/pki/mtls/ca/ca.key",
+        "/etc/pki/mtls/server/server.key",
+        "/etc/pki/mtls/client/client.key",
+    ],
+)
 def test_private_key_permissions(host, path):
     """Verify private keys have restricted permissions."""
     key = host.file(path)
@@ -79,11 +92,14 @@ def test_private_key_permissions(host, path):
     assert key.mode == 0o640, f"{path} should have mode 0640"
 
 
-@pytest.mark.parametrize("path", [
-    "/etc/pki/mtls/ca/ca.pem",
-    "/etc/pki/mtls/server/server.pem",
-    "/etc/pki/mtls/client/client.pem",
-])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/etc/pki/mtls/ca/ca.pem",
+        "/etc/pki/mtls/server/server.pem",
+        "/etc/pki/mtls/client/client.pem",
+    ],
+)
 def test_certificate_permissions(host, path):
     """Verify certificates have correct permissions."""
     cert = host.file(path)
@@ -96,11 +112,12 @@ def test_certificate_permissions(host, path):
 # Certificate Attribute Tests
 # =============================================================================
 
+
 def test_ca_certificate_attributes(host):
     """Verify CA certificate has correct attributes."""
     cert_path = "/etc/pki/mtls/ca/ca.pem"
     cert_file = host.file(cert_path)
-    
+
     # Verify it's a certificate
     assert "BEGIN CERTIFICATE" in cert_file.content_string
     assert "END CERTIFICATE" in cert_file.content_string
@@ -108,7 +125,10 @@ def test_ca_certificate_attributes(host):
     # Check subject CN via openssl
     cmd = host.run(f"openssl x509 -noout -subject -in {cert_path}")
     assert cmd.rc == 0
-    assert "CN = test-ca.example.com" in cmd.stdout or "CN=test-ca.example.com" in cmd.stdout
+    assert (
+        "CN = test-ca.example.com" in cmd.stdout
+        or "CN=test-ca.example.com" in cmd.stdout
+    )
 
 
 def test_server_certificate_attributes(host):
@@ -123,7 +143,10 @@ def test_server_certificate_attributes(host):
     # Check subject CN via openssl
     cmd = host.run(f"openssl x509 -noout -subject -in {cert_path}")
     assert cmd.rc == 0
-    assert "CN = test-server.example.com" in cmd.stdout or "CN=test-server.example.com" in cmd.stdout
+    assert (
+        "CN = test-server.example.com" in cmd.stdout
+        or "CN=test-server.example.com" in cmd.stdout
+    )
 
 
 def test_client_certificate_attributes(host):
@@ -138,7 +161,10 @@ def test_client_certificate_attributes(host):
     # Check subject CN via openssl
     cmd = host.run(f"openssl x509 -noout -subject -in {cert_path}")
     assert cmd.rc == 0
-    assert "CN = test-client.example.com" in cmd.stdout or "CN=test-client.example.com" in cmd.stdout
+    assert (
+        "CN = test-client.example.com" in cmd.stdout
+        or "CN=test-client.example.com" in cmd.stdout
+    )
 
 
 def test_certificate_key_sizes(host):
@@ -174,6 +200,7 @@ def test_server_certificate_san(host):
 # =============================================================================
 # Security Tests
 # =============================================================================
+
 
 def test_no_world_writable_files(host):
     """Verify no world-writable files in certificate directories."""
