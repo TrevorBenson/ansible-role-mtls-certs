@@ -1,0 +1,37 @@
+---
+name: Pre-Merge Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  yaml-lint:
+    name: YAML Lint
+    uses: ./.github/workflows/yaml-lint.yml
+    with:
+      strict: false
+
+  ansible-lint:
+    name: Ansible Lint
+    uses: ./.github/workflows/ansible-lint.yml
+    with:
+      ansible-version: "2.16"
+      python-version: "3.12"
+
+  molecule:
+    name: Molecule Tests
+    needs: [yaml-lint, ansible-lint]
+    uses: ./.github/workflows/molecule-test.yml
+    with:
+      python-version: "3.12"

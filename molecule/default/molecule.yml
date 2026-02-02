@@ -1,0 +1,98 @@
+---
+# Molecule configuration for mTLS Certificate role testing
+# Tests certificate generation across multiple OS versions
+
+dependency:
+  name: galaxy
+
+driver:
+  name: docker
+
+platforms:
+  # Rocky Linux 8
+  - name: rocky8
+    image: geerlingguy/docker-rockylinux8-ansible:latest
+    pre_build_image: true
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    command: /usr/sbin/init
+    networks:
+      - name: molecule
+
+  # Rocky Linux 9
+  - name: rocky9
+    image: geerlingguy/docker-rockylinux9-ansible:latest
+    pre_build_image: true
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    command: /usr/sbin/init
+    networks:
+      - name: molecule
+
+  # Ubuntu 22.04 LTS
+  - name: ubuntu2204
+    image: geerlingguy/docker-ubuntu2204-ansible:latest
+    pre_build_image: true
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    command: /lib/systemd/systemd
+    networks:
+      - name: molecule
+
+  # Ubuntu 24.04 LTS
+  - name: ubuntu2404
+    image: geerlingguy/docker-ubuntu2404-ansible:latest
+    pre_build_image: true
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    command: /lib/systemd/systemd
+    networks:
+      - name: molecule
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      interpreter_python: auto_silent
+      callbacks_enabled: profile_tasks, timer, yaml
+      roles_path: "${MOLECULE_PROJECT_DIRECTORY}/..:~/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles"
+  inventory:
+    host_vars:
+      rocky8:
+        ansible_python_interpreter: /usr/bin/python3
+      rocky9:
+        ansible_python_interpreter: /usr/bin/python3
+      ubuntu2204:
+        ansible_python_interpreter: /usr/bin/python3
+      ubuntu2404:
+        ansible_python_interpreter: /usr/bin/python3
+  playbooks:
+    converge: converge.yml
+    verify: verify.yml
+
+verifier:
+  name: ansible
+
+scenario:
+  name: default
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy

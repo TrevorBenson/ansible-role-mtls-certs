@@ -1,0 +1,257 @@
+---
+# tasks/main.yml - mTLS Certificate Generation
+# Generates a self-signed CA, server certificate, and client certificate for mTLS
+
+# =============================================================================
+# Check for existing certificates
+# =============================================================================
+
+- name: Check for existing CA files
+  block:
+    - name: Check CA key exists
+      ansible.builtin.stat:
+        path: "{{ mtls_paths.ca_key }}"
+      register: stat_ca_key
+
+    - name: Check CA CSR exists
+      ansible.builtin.stat:
+        path: "{{ mtls_paths.ca_csr }}"
+      register: stat_ca_csr
+
+    - name: Check CA certificate exists
+      ansible.builtin.stat:
+        path: "{{ mtls_paths.ca_pem }}"
+      register: stat_ca_pem
+  when: mtls_generate_ca | bool
+
+- name: Check for existing server files
+  block:
+    - name: Check server key exists
+      ansible.builtin.stat:
+        path: "{{ mtls_paths.server_key }}"
+      register: stat_server_key
+
+    - name: Check server CSR exists
+      ansible.builtin.stat:
+        path: "{{ mtls_paths.server_csr }}"
+      register: stat_server_csr
+
+    - name: Check server certificate exists
+      ansible.builtin.stat:
+        path: "{{ mtls_paths.server_pem }}"
+      register: stat_server_pem
+  when: mtls_generate_server | bool
+
+- name: Check for existing client files
+  block:
+    - name: Check client key exists
+      ansible.builtin.stat:
+        path: "{{ mtls_paths.client_key }}"
+      register: stat_client_key
+
+    - name: Check client CSR exists
+      ansible.builtin.stat:
+        path: "{{ mtls_paths.client_csr }}"
+      register: stat_client_csr
+
+    - name: Check client certificate exists
+      ansible.builtin.stat:
+        path: "{{ mtls_paths.client_pem }}"
+      register: stat_client_pem
+  when: mtls_generate_client | bool
+
+# =============================================================================
+# Create certificate directories
+# =============================================================================
+
+- name: Create certificate directories
+  ansible.builtin.file:
+    state: directory
+    path: "{{ item }}"
+    owner: "{{ mtls_cert_owner }}"
+    group: "{{ mtls_cert_group }}"
+    mode: "{{ mtls_dir_mode }}"
+  loop:
+    - "{{ mtls_cert_dir }}"
+    - "{{ mtls_paths.ca_dir }}"
+    - "{{ mtls_paths.server_dir }}"
+    - "{{ mtls_paths.client_dir }}"
+
+# =============================================================================
+# CA Certificate Generation
+# =============================================================================
+
+- name: Generate CA certificate
+  when: mtls_generate_ca | bool
+  block:
+    - name: Create CA private key
+      community.crypto.openssl_privatekey:
+        path: "{{ mtls_paths.ca_key }}"
+        size: "{{ mtls_ca_key_size }}"
+        owner: "{{ mtls_cert_owner }}"
+        group: "{{ mtls_cert_group }}"
+        mode: "{{ mtls_key_mode }}"
+      when: not stat_ca_key.stat.exists or mtls_force_regenerate
+      register: ca_key_result
+
+    - name: Create CA CSR
+      community.crypto.openssl_csr:
+        path: "{{ mtls_paths.ca_csr }}"
+        privatekey_path: "{{ mtls_paths.ca_key }}"
+        common_name: "{{ mtls_ca_common_name }}"
+        digest: "{{ mtls_ca_digest }}"
+        basic_constraints:
+          - CA:TRUE
+        basic_constraints_critical: true
+        key_usage:
+          - keyCertSign
+          - cRLSign
+        key_usage_critical: true
+      when: not stat_ca_csr.stat.exists or mtls_force_regenerate or (ca_key_result is changed)
+
+    - name: Create self-signed CA certificate
+      community.crypto.x509_certificate:
+        path: "{{ mtls_paths.ca_pem }}"
+        privatekey_path: "{{ mtls_paths.ca_key }}"
+        csr_path: "{{ mtls_paths.ca_csr }}"
+        provider: selfsigned
+        selfsigned_not_after: "+{{ mtls_ca_validity_days }}d"
+        owner: "{{ mtls_cert_owner }}"
+        group: "{{ mtls_cert_group }}"
+        mode: "{{ mtls_cert_mode }}"
+      when: not stat_ca_pem.stat.exists or mtls_force_regenerate or (ca_key_result is defined and ca_key_result is changed)
+      register: ca_cert_result
+
+# =============================================================================
+# Server Certificate Generation
+# =============================================================================
+
+- name: Generate server certificate
+  when: mtls_generate_server | bool
+  block:
+    - name: Build server SAN list
+      ansible.builtin.set_fact:
+        _mtls_server_san: >-
+          {%- set san_list = [] -%}
+          {%- if mtls_server_use_ansible_ip and ansible_default_ipv4 is defined -%}
+            {%- set _ = san_list.append('IP:' + ansible_default_ipv4.address) -%}
+          {%- endif -%}
+          {%- for dns in ([mtls_server_common_name] + mtls_server_san_dns) -%}
+            {%- set _ = san_list.append('DNS:' + dns) -%}
+          {%- endfor -%}
+          {%- for ip in mtls_server_san_ip -%}
+            {%- set _ = san_list.append('IP:' + ip) -%}
+          {%- endfor -%}
+          {{ san_list | join(',') }}
+
+    - name: Create server private key
+      community.crypto.openssl_privatekey:
+        path: "{{ mtls_paths.server_key }}"
+        size: "{{ mtls_server_key_size }}"
+        owner: "{{ mtls_cert_owner }}"
+        group: "{{ mtls_cert_group }}"
+        mode: "{{ mtls_key_mode }}"
+      when: not stat_server_key.stat.exists or mtls_force_regenerate
+      register: server_key_result
+
+    - name: Create server CSR
+      community.crypto.openssl_csr:
+        path: "{{ mtls_paths.server_csr }}"
+        privatekey_path: "{{ mtls_paths.server_key }}"
+        common_name: "{{ mtls_server_common_name }}"
+        digest: "{{ mtls_server_digest }}"
+        key_usage:
+          - digitalSignature
+          - keyEncipherment
+        extended_key_usage:
+          - serverAuth
+        subject_alt_name: "{{ _mtls_server_san }}"
+      when: not stat_server_csr.stat.exists or mtls_force_regenerate or (server_key_result is changed)
+
+    - name: Create server certificate (signed by CA)
+      community.crypto.x509_certificate:
+        path: "{{ mtls_paths.server_pem }}"
+        privatekey_path: "{{ mtls_paths.server_key }}"
+        csr_path: "{{ mtls_paths.server_csr }}"
+        ownca_path: "{{ mtls_paths.ca_pem }}"
+        ownca_privatekey_path: "{{ mtls_paths.ca_key }}"
+        ownca_not_after: "+{{ mtls_server_validity_days }}d"
+        provider: ownca
+        owner: "{{ mtls_cert_owner }}"
+        group: "{{ mtls_cert_group }}"
+        mode: "{{ mtls_cert_mode }}"
+      when: >-
+        not stat_server_pem.stat.exists or
+        mtls_force_regenerate or
+        (ca_cert_result is defined and ca_cert_result is changed) or
+        (server_key_result is defined and server_key_result is changed)
+
+# =============================================================================
+# Client Certificate Generation
+# =============================================================================
+
+- name: Generate client certificate
+  when: mtls_generate_client | bool
+  block:
+    - name: Create client private key
+      community.crypto.openssl_privatekey:
+        path: "{{ mtls_paths.client_key }}"
+        size: "{{ mtls_client_key_size }}"
+        owner: "{{ mtls_cert_owner }}"
+        group: "{{ mtls_cert_group }}"
+        mode: "{{ mtls_key_mode }}"
+      when: not stat_client_key.stat.exists or mtls_force_regenerate
+      register: client_key_result
+
+    - name: Create client CSR
+      community.crypto.openssl_csr:
+        path: "{{ mtls_paths.client_csr }}"
+        privatekey_path: "{{ mtls_paths.client_key }}"
+        common_name: "{{ mtls_client_common_name }}"
+        digest: "{{ mtls_client_digest }}"
+        key_usage:
+          - nonRepudiation
+          - digitalSignature
+          - keyEncipherment
+        extended_key_usage:
+          - clientAuth
+      when: not stat_client_csr.stat.exists or mtls_force_regenerate or (client_key_result is changed)
+
+    - name: Create client certificate (signed by CA)
+      community.crypto.x509_certificate:
+        path: "{{ mtls_paths.client_pem }}"
+        privatekey_path: "{{ mtls_paths.client_key }}"
+        csr_path: "{{ mtls_paths.client_csr }}"
+        ownca_path: "{{ mtls_paths.ca_pem }}"
+        ownca_privatekey_path: "{{ mtls_paths.ca_key }}"
+        ownca_not_after: "+{{ mtls_client_validity_days }}d"
+        provider: ownca
+        owner: "{{ mtls_cert_owner }}"
+        group: "{{ mtls_cert_group }}"
+        mode: "{{ mtls_cert_mode }}"
+      when: >-
+        not stat_client_pem.stat.exists or
+        mtls_force_regenerate or
+        (ca_cert_result is defined and ca_cert_result is changed) or
+        (client_key_result is defined and client_key_result is changed)
+
+# =============================================================================
+# Display Certificate Information
+# =============================================================================
+
+- name: Display mTLS certificate locations
+  ansible.builtin.debug:
+    msg:
+      - "=========================================="
+      - "mTLS Certificate Generation Complete!"
+      - "=========================================="
+      - ""
+      - "CA Certificate:     {{ mtls_paths.ca_pem }}"
+      - "CA Key:             {{ mtls_paths.ca_key }}"
+      - ""
+      - "Server Certificate: {{ mtls_paths.server_pem }}"
+      - "Server Key:         {{ mtls_paths.server_key }}"
+      - ""
+      - "Client Certificate: {{ mtls_paths.client_pem }}"
+      - "Client Key:         {{ mtls_paths.client_key }}"
+      - "=========================================="

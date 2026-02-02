@@ -1,0 +1,66 @@
+---
+name: Molecule Testing
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version"
+        required: false
+        type: string
+        default: "3.12"
+  workflow_dispatch:
+    inputs:
+      python-version:
+        description: "Python version"
+        required: false
+        type: string
+        default: "3.12"
+
+jobs:
+  molecule:
+    name: Molecule Tests
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+          - default
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install dependencies
+        run: |
+          uv pip install --system -r requirements-dev.txt
+
+      - name: Install Ansible Galaxy requirements
+        run: |
+          ansible-galaxy collection install community.crypto
+          ansible-galaxy collection install community.docker
+
+      - name: Run Molecule tests
+        run: molecule test --scenario-name ${{ matrix.scenario }}
+        env:
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"
+
+      - name: Upload Molecule logs on failure
+        if: failure()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: molecule-logs-${{ matrix.scenario }}
+          path: |
+            molecule/${{ matrix.scenario }}/.molecule/
+          retention-days: 7

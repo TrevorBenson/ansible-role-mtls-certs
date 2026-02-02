@@ -1,0 +1,198 @@
+---
+# Molecule verification playbook - validates certificate generation success
+
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    # =============================================================================
+    # 1. Directory Existence Verification
+    # =============================================================================
+
+    - name: Check certificate directories exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: dir_check
+      loop:
+        - /etc/pki/mtls
+        - /etc/pki/mtls/ca
+        - /etc/pki/mtls/server
+        - /etc/pki/mtls/client
+
+    - name: Verify certificate directories exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isdir
+        fail_msg: "Directory {{ item.item }} does not exist or is not a directory"
+      loop: "{{ dir_check.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Verify directory permissions
+      ansible.builtin.stat:
+        path: /etc/pki/mtls
+      register: base_dir
+
+    - name: Assert base directory permissions
+      ansible.builtin.assert:
+        that:
+          - base_dir.stat.mode == "0750"
+          - base_dir.stat.pw_name == "root"
+          - base_dir.stat.gr_name == "root"
+        fail_msg: "Base directory has incorrect permissions"
+
+    # =============================================================================
+    # 2. Certificate File Existence Verification
+    # =============================================================================
+
+    - name: Check CA files exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: ca_files
+      loop:
+        - /etc/pki/mtls/ca/ca.pem
+        - /etc/pki/mtls/ca/ca.key
+        - /etc/pki/mtls/ca/ca.csr
+      failed_when: not (ca_files.results | map(attribute='stat.exists') | all)
+
+    - name: Check server files exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: server_files
+      loop:
+        - /etc/pki/mtls/server/server.pem
+        - /etc/pki/mtls/server/server.key
+        - /etc/pki/mtls/server/server.csr
+      failed_when: not (server_files.results | map(attribute='stat.exists') | all)
+
+    - name: Check client files exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: client_files
+      loop:
+        - /etc/pki/mtls/client/client.pem
+        - /etc/pki/mtls/client/client.key
+        - /etc/pki/mtls/client/client.csr
+      failed_when: not (client_files.results | map(attribute='stat.exists') | all)
+
+    # =============================================================================
+    # 3. Certificate Permissions Verification
+    # =============================================================================
+
+    - name: Check private key permissions
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: key_perms
+      loop:
+        - /etc/pki/mtls/ca/ca.key
+        - /etc/pki/mtls/server/server.key
+        - /etc/pki/mtls/client/client.key
+
+    - name: Assert private keys have correct permissions
+      ansible.builtin.assert:
+        that:
+          - item.stat.mode == "0640"
+          - item.stat.pw_name == "root"
+        fail_msg: "Private key {{ item.item }} has incorrect permissions: {{ item.stat.mode }}"
+      loop: "{{ key_perms.results }}"
+
+    - name: Check certificate permissions
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: cert_perms
+      loop:
+        - /etc/pki/mtls/ca/ca.pem
+        - /etc/pki/mtls/server/server.pem
+        - /etc/pki/mtls/client/client.pem
+
+    - name: Assert certificates have correct permissions
+      ansible.builtin.assert:
+        that:
+          - item.stat.mode == "0644"
+          - item.stat.pw_name == "root"
+        fail_msg: "Certificate {{ item.item }} has incorrect permissions"
+      loop: "{{ cert_perms.results }}"
+
+    # =============================================================================
+    # 4. Certificate Attribute Verification
+    # =============================================================================
+
+    - name: Get CA certificate details
+      community.crypto.x509_certificate_info:
+        path: /etc/pki/mtls/ca/ca.pem
+      register: ca_cert_info
+
+    - name: Verify CA certificate attributes
+      ansible.builtin.assert:
+        that:
+          - ca_cert_info.subject.commonName == "test-ca.example.com"
+          - ca_cert_info.public_key_type == "RSA"
+          - ca_cert_info.public_key_data.size == 4096
+        fail_msg: |
+          CA certificate attributes incorrect:
+            CN: {{ ca_cert_info.subject.commonName }}
+            Key type: {{ ca_cert_info.public_key_type }}
+            Key size: {{ ca_cert_info.public_key_data.size }}
+
+    - name: Get server certificate details
+      community.crypto.x509_certificate_info:
+        path: /etc/pki/mtls/server/server.pem
+      register: server_cert_info
+
+    - name: Verify server certificate attributes
+      ansible.builtin.assert:
+        that:
+          - server_cert_info.subject.commonName == "test-server.example.com"
+          - server_cert_info.public_key_type == "RSA"
+          - server_cert_info.public_key_data.size == 2048
+        fail_msg: "Server certificate attributes incorrect"
+
+    - name: Verify server certificate has SAN
+      ansible.builtin.assert:
+        that:
+          - (server_cert_info.subject_alt_name | default([])) | length > 0
+        fail_msg: "Server certificate missing Subject Alternative Name"
+
+    - name: Get client certificate details
+      community.crypto.x509_certificate_info:
+        path: /etc/pki/mtls/client/client.pem
+      register: client_cert_info
+
+    - name: Verify client certificate attributes
+      ansible.builtin.assert:
+        that:
+          - client_cert_info.subject.commonName == "test-client.example.com"
+          - client_cert_info.public_key_type == "RSA"
+          - client_cert_info.public_key_data.size == 2048
+        fail_msg: "Client certificate attributes incorrect"
+
+    # =============================================================================
+    # 5. Security Verification
+    # =============================================================================
+
+    - name: Check for world-writable files
+      ansible.builtin.command:
+        cmd: find /etc/pki/mtls -type f -perm -002
+      register: world_writable
+      changed_when: false
+
+    - name: Assert no world-writable files
+      ansible.builtin.assert:
+        that:
+          - world_writable.stdout == ""
+        fail_msg: "Found world-writable files in certificate directory"
+
+    - name: Display verification summary
+      ansible.builtin.debug:
+        msg: |
+          ✓ All verification checks passed!
+          - Directories: created with correct permissions
+          - Certificates: CA (4096-bit), Server/Client (2048-bit)
+          - CA CN: {{ ca_cert_info.subject.commonName }}
+          - Server CN: {{ server_cert_info.subject.commonName }}
+          - Client CN: {{ client_cert_info.subject.commonName }}
+          - Server SAN: {{ server_cert_info.subject_alt_name | default([]) | join(', ') }}
+          - Permissions: correct (keys 0640, certs 0644)
