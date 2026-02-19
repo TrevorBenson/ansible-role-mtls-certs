@@ -9,53 +9,32 @@ driver:
   name: docker
 
 platforms:
-  # Rocky Linux 8
-  - name: rocky8
-    image: geerlingguy/docker-rockylinux8-ansible:latest
+  # RHEL 9
+  - name: ubi9-mtls-certs
+    image: docker.io/cthullu/ubi9-ansible:latest
     pre_build_image: true
     privileged: true
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
-    cgroupns_mode: host
-    command: /usr/sbin/init
+    command: /sbin/init
     networks:
       - name: molecule
+    groups:
+      - ubi9
 
-  # Rocky Linux 9
-  - name: rocky9
-    image: geerlingguy/docker-rockylinux9-ansible:latest
+  # Rocky Linux 10
+  - name: rocky10-mtls-certs
+    image: docker.io/geerlingguy/docker-rockylinux10-ansible:latest
     pre_build_image: true
     privileged: true
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
-    cgroupns_mode: host
-    command: /usr/sbin/init
+    command: /sbin/init
     networks:
       - name: molecule
+    groups:
+      - rocky10
 
-  # Ubuntu 22.04 LTS
-  - name: ubuntu2204
-    image: geerlingguy/docker-ubuntu2204-ansible:latest
-    pre_build_image: true
-    privileged: true
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
-    cgroupns_mode: host
-    command: /lib/systemd/systemd
-    networks:
-      - name: molecule
-
-  # Ubuntu 24.04 LTS
-  - name: ubuntu2404
-    image: geerlingguy/docker-ubuntu2404-ansible:latest
-    pre_build_image: true
-    privileged: true
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
-    cgroupns_mode: host
-    command: /lib/systemd/systemd
-    networks:
-      - name: molecule
 
 provisioner:
   name: ansible
@@ -66,13 +45,9 @@ provisioner:
       roles_path: "${MOLECULE_PROJECT_DIRECTORY}/..:~/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles"
   inventory:
     host_vars:
-      rocky8:
+      ubi9-mtls-certs:
         ansible_python_interpreter: /usr/bin/python3
-      rocky9:
-        ansible_python_interpreter: /usr/bin/python3
-      ubuntu2204:
-        ansible_python_interpreter: /usr/bin/python3
-      ubuntu2404:
+      rocky10-mtls-certs:
         ansible_python_interpreter: /usr/bin/python3
   playbooks:
     converge: converge.yml
@@ -85,14 +60,10 @@ scenario:
   name: default
   test_sequence:
     - dependency
-    - cleanup
     - destroy
     - syntax
     - create
-    - prepare
     - converge
     - idempotence
-    - side_effect
     - verify
-    - cleanup
     - destroy

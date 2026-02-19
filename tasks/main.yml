@@ -2,63 +2,7 @@
 # tasks/main.yml - mTLS Certificate Generation
 # Generates a self-signed CA, server certificate, and client certificate for mTLS
 
-# =============================================================================
-# Check for existing certificates
-# =============================================================================
 
-- name: Check for existing CA files
-  block:
-    - name: Check CA key exists
-      ansible.builtin.stat:
-        path: "{{ mtls_paths.ca_key }}"
-      register: stat_ca_key
-
-    - name: Check CA CSR exists
-      ansible.builtin.stat:
-        path: "{{ mtls_paths.ca_csr }}"
-      register: stat_ca_csr
-
-    - name: Check CA certificate exists
-      ansible.builtin.stat:
-        path: "{{ mtls_paths.ca_pem }}"
-      register: stat_ca_pem
-  when: mtls_generate_ca | bool
-
-- name: Check for existing server files
-  block:
-    - name: Check server key exists
-      ansible.builtin.stat:
-        path: "{{ mtls_paths.server_key }}"
-      register: stat_server_key
-
-    - name: Check server CSR exists
-      ansible.builtin.stat:
-        path: "{{ mtls_paths.server_csr }}"
-      register: stat_server_csr
-
-    - name: Check server certificate exists
-      ansible.builtin.stat:
-        path: "{{ mtls_paths.server_pem }}"
-      register: stat_server_pem
-  when: mtls_generate_server | bool
-
-- name: Check for existing client files
-  block:
-    - name: Check client key exists
-      ansible.builtin.stat:
-        path: "{{ mtls_paths.client_key }}"
-      register: stat_client_key
-
-    - name: Check client CSR exists
-      ansible.builtin.stat:
-        path: "{{ mtls_paths.client_csr }}"
-      register: stat_client_csr
-
-    - name: Check client certificate exists
-      ansible.builtin.stat:
-        path: "{{ mtls_paths.client_pem }}"
-      register: stat_client_pem
-  when: mtls_generate_client | bool
 
 # =============================================================================
 # Create certificate directories
@@ -91,7 +35,7 @@
         owner: "{{ mtls_cert_owner }}"
         group: "{{ mtls_cert_group }}"
         mode: "{{ mtls_key_mode }}"
-      when: not stat_ca_key.stat.exists or mtls_force_regenerate
+        force: "{{ mtls_force_regenerate }}"
       register: ca_key_result
 
     - name: Create CA CSR
@@ -107,7 +51,7 @@
           - keyCertSign
           - cRLSign
         key_usage_critical: true
-      when: not stat_ca_csr.stat.exists or mtls_force_regenerate or (ca_key_result is changed)
+        force: "{{ mtls_force_regenerate }}"
 
     - name: Create self-signed CA certificate
       community.crypto.x509_certificate:
@@ -119,7 +63,7 @@
         owner: "{{ mtls_cert_owner }}"
         group: "{{ mtls_cert_group }}"
         mode: "{{ mtls_cert_mode }}"
-      when: not stat_ca_pem.stat.exists or mtls_force_regenerate or (ca_key_result is defined and ca_key_result is changed)
+        force: "{{ mtls_force_regenerate }}"
       register: ca_cert_result
 
 # =============================================================================
@@ -133,8 +77,8 @@
       ansible.builtin.set_fact:
         _mtls_server_san: >-
           {%- set san_list = [] -%}
-          {%- if mtls_server_use_ansible_ip and ansible_default_ipv4 is defined -%}
-            {%- set _ = san_list.append('IP:' + ansible_default_ipv4.address) -%}
+          {%- if mtls_server_use_ansible_ip and ansible_default_ipv4 is defined and ansible_default_ipv4['address'] is defined -%}
+            {%- set _ = san_list.append('IP:' + ansible_default_ipv4['address']) -%}
           {%- endif -%}
           {%- for dns in ([mtls_server_common_name] + mtls_server_san_dns) -%}
             {%- set _ = san_list.append('DNS:' + dns) -%}
@@ -151,7 +95,7 @@
         owner: "{{ mtls_cert_owner }}"
         group: "{{ mtls_cert_group }}"
         mode: "{{ mtls_key_mode }}"
-      when: not stat_server_key.stat.exists or mtls_force_regenerate
+        force: "{{ mtls_force_regenerate }}"
       register: server_key_result
 
     - name: Create server CSR
@@ -166,7 +110,7 @@
         extended_key_usage:
           - serverAuth
         subject_alt_name: "{{ _mtls_server_san }}"
-      when: not stat_server_csr.stat.exists or mtls_force_regenerate or (server_key_result is changed)
+        force: "{{ mtls_force_regenerate }}"
 
     - name: Create server certificate (signed by CA)
       community.crypto.x509_certificate:
@@ -180,11 +124,7 @@
         owner: "{{ mtls_cert_owner }}"
         group: "{{ mtls_cert_group }}"
         mode: "{{ mtls_cert_mode }}"
-      when: >-
-        not stat_server_pem.stat.exists or
-        mtls_force_regenerate or
-        (ca_cert_result is defined and ca_cert_result is changed) or
-        (server_key_result is defined and server_key_result is changed)
+        force: "{{ mtls_force_regenerate }}"
 
 # =============================================================================
 # Client Certificate Generation
@@ -200,7 +140,7 @@
         owner: "{{ mtls_cert_owner }}"
         group: "{{ mtls_cert_group }}"
         mode: "{{ mtls_key_mode }}"
-      when: not stat_client_key.stat.exists or mtls_force_regenerate
+        force: "{{ mtls_force_regenerate }}"
       register: client_key_result
 
     - name: Create client CSR
@@ -215,7 +155,7 @@
           - keyEncipherment
         extended_key_usage:
           - clientAuth
-      when: not stat_client_csr.stat.exists or mtls_force_regenerate or (client_key_result is changed)
+        force: "{{ mtls_force_regenerate }}"
 
     - name: Create client certificate (signed by CA)
       community.crypto.x509_certificate:
@@ -229,11 +169,7 @@
         owner: "{{ mtls_cert_owner }}"
         group: "{{ mtls_cert_group }}"
         mode: "{{ mtls_cert_mode }}"
-      when: >-
-        not stat_client_pem.stat.exists or
-        mtls_force_regenerate or
-        (ca_cert_result is defined and ca_cert_result is changed) or
-        (client_key_result is defined and client_key_result is changed)
+        force: "{{ mtls_force_regenerate }}"
 
 # =============================================================================
 # Display Certificate Information

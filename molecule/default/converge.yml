@@ -10,11 +10,11 @@
     - name: Set ansible_default_ipv4 fact for Docker containers
       ansible.builtin.set_fact:
         ansible_default_ipv4:
-          address: "{{ (ansible_eth0.ipv4.address if (ansible_eth0 is defined and 'ipv4' in ansible_eth0) else (ansible_default_ipv4.address if (ansible_default_ipv4 is defined and 'address' in ansible_default_ipv4) else '127.0.0.1')) }}"
-      when: ansible_virtualization_type == "docker"
+          address: "{{ (ansible_facts['eth0']['ipv4']['address'] if (ansible_facts['eth0'] is defined and 'ipv4' in ansible_facts['eth0']) else (ansible_facts['default_ipv4']['address'] if (ansible_facts['default_ipv4'] is defined and 'address' in ansible_default_ipv4) else '127.0.0.1')) }}"
+      when: ansible_facts["virtualization_type"] == "docker"
 
   roles:
-    - role: ansible-role-mtls-certs
+    - role: TrevorBenson.mtls_certs
       vars:
         # Test with shorter validity periods
         mtls_ca_validity_days: 365

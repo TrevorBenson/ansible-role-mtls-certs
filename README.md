@@ -99,7 +99,7 @@ mtls_paths:
 ```yaml
 - hosts: servers
   roles:
-    - role: ansible-role-mtls-certs
+    - role: TrevorBenson.mtls_certs
       vars:
         mtls_ca_common_name: "myorg-ca.internal"
         mtls_server_common_name: "api.myorg.internal"
@@ -111,7 +111,7 @@ mtls_paths:
 ```yaml
 - hosts: servers
   roles:
-    - role: ansible-role-mtls-certs
+    - role: TrevorBenson.mtls_certs
       vars:
         mtls_cert_dir: /opt/myapp/certs
         mtls_cert_group: myapp
