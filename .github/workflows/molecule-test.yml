@@ -1,0 +1,61 @@
+---
+name: Molecule Testing
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version"
+        required: false
+        type: string
+        default: "3.12"
+  workflow_dispatch:
+    inputs:
+      python-version:
+        description: "Python version"
+        required: false
+        type: string
+        default: "3.12"
+
+defaults:
+  run:
+    working-directory: 'trevorbenson.mtls_certs'
+
+jobs:
+  molecule:
+    name: Molecule Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+          - default
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          path: 'trevorbenson.mtls_certs'
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
+        with:
+          # Can't go to 3.14+ until Ansible 13.x
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install test dependencies.
+        run: |
+          pip3 install -r requirements-dev.txt
+
+      - name: Install Ansible Galaxy requirements
+        run: |
+          ansible-galaxy collection install ansible.posix
+          ansible-galaxy collection install community.crypto
+          ansible-galaxy collection install community.docker
+          ansible-galaxy collection install community.general
+
+      - name: Run Molecule tests
+        run: molecule test --scenario-name ${{ matrix.scenario }} --report
+        env:
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"

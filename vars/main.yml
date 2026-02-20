@@ -1,0 +1,22 @@
+---
+# vars/main.yml - Computed path variables for mTLS certificates
+# These are internal variables derived from defaults, not meant for user override
+
+mtls_paths:
+  # CA certificate paths
+  ca_dir: "{{ mtls_cert_dir }}/ca"
+  ca_key: "{{ mtls_cert_dir }}/ca/{{ mtls_ca_key_filename }}"
+  ca_csr: "{{ mtls_cert_dir }}/ca/{{ mtls_ca_csr_filename }}"
+  ca_pem: "{{ mtls_cert_dir }}/ca/{{ mtls_ca_filename }}"
+
+  # Server certificate paths
+  server_dir: "{{ mtls_cert_dir }}/server"
+  server_key: "{{ mtls_cert_dir }}/server/{{ mtls_server_key_filename }}"
+  server_csr: "{{ mtls_cert_dir }}/server/{{ mtls_server_csr_filename }}"
+  server_pem: "{{ mtls_cert_dir }}/server/{{ mtls_server_filename }}"
+
+  # Client certificate paths
+  client_dir: "{{ mtls_cert_dir }}/client"
+  client_key: "{{ mtls_cert_dir }}/client/{{ mtls_client_key_filename }}"
+  client_csr: "{{ mtls_cert_dir }}/client/{{ mtls_client_csr_filename }}"
+  client_pem: "{{ mtls_cert_dir }}/client/{{ mtls_client_filename }}"

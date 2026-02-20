@@ -1,0 +1,87 @@
+---
+name: Pre-Merge Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      ansible-version:
+        description: "Ansible version"
+        required: false
+        type: string
+        default: "2.16"
+      python-version:
+        description: "Python version"
+        required: false
+        type: string
+        default: "3.12"
+      strict-yaml:
+        description: "Enable strict YAML linting"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  yaml-lint:
+    name: YAML Linting
+    uses: ./.github/workflows/yaml-lint.yml
+    with:
+      strict: ${{ inputs.strict-yaml || false }}
+
+  ansible-lint:
+    name: Ansible Linting
+    uses: ./.github/workflows/ansible-lint.yml
+    with:
+      ansible-version: ${{ inputs.ansible-version || '2.16' }}
+      ansible-paths: "defaults handlers meta tasks vars"
+      python-version: ${{ inputs.python-version || '3.12' }}
+
+  role-validation:
+    name: Role Structure
+    uses: ./.github/workflows/role-validation.yml
+
+  molecule-tests:
+    name: Molecule Testing
+    uses: ./.github/workflows/molecule-test.yml
+    needs: [yaml-lint, ansible-lint, role-validation]
+    with:
+      python-version: ${{ inputs.python-version || '3.12' }}
+
+  codeql:
+    name: CodeQL Analysis
+    uses: ./.github/workflows/codeql.yml
+
+  status-check:
+    name: All Checks Passed
+    runs-on: ubuntu-24.04
+    needs:
+      [
+        yaml-lint,
+        ansible-lint,
+        role-validation,
+        molecule-tests,
+        codeql,
+      ]
+    if: always()
+
+    steps:
+      - name: Check all jobs succeeded
+        run: |
+          results="${{ toJSON(needs) }}"
+          if echo "$results" | grep -qE '"result":\s*"(failure|cancelled)"'; then
+            echo "❌ One or more checks failed"
+            exit 1
+          fi
+          echo "✅ All pre-merge checks passed"

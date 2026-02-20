@@ -1,0 +1,63 @@
+---
+# defaults/main.yml - mTLS Certificate Role Configuration
+# These variables can be overridden in playbooks or inventory
+
+# =============================================================================
+# Directory and Ownership Configuration
+# =============================================================================
+
+# Base directory for all certificates
+mtls_cert_dir: "/etc/pki/mtls"
+
+# File ownership (root is secure default, override for service user access)
+mtls_cert_owner: "root"
+mtls_cert_group: "root"
+
+# File permissions
+mtls_dir_mode: "0750" # Directory permissions
+mtls_cert_mode: "0644" # Certificate file permissions
+mtls_key_mode: "0600" # Private key permissions (owner-only access)
+
+# --- CA Certificate Configuration ---
+mtls_ca_common_name: "ca-root.example.com"
+mtls_ca_key_size: 4096
+mtls_ca_validity_days: 3650 # 10 years
+mtls_ca_digest: "sha256"
+mtls_ca_filename: "ca.pem"
+mtls_ca_key_filename: "ca.key"
+mtls_ca_csr_filename: "ca.csr"
+
+# --- Server Certificate Configuration ---
+mtls_server_common_name: "server.example.com"
+mtls_server_key_size: 2048
+mtls_server_validity_days: 397 # 397 days (Modern browser maximum)
+mtls_server_digest: "sha256"
+mtls_server_filename: "server.pem"
+mtls_server_key_filename: "server.key"
+mtls_server_csr_filename: "server.csr"
+
+# Subject Alternative Names (SAN)
+mtls_server_san_dns: [] # Additional DNS names (list)
+mtls_server_san_ip: [] # Additional IP addresses (list)
+mtls_server_use_ansible_ip: true # Auto-add ansible_default_ipv4.address to SAN
+
+# --- Client Certificate Configuration ---
+mtls_client_common_name: "client.example.com"
+mtls_client_key_size: 2048
+mtls_client_validity_days: 365 # 1 year
+mtls_client_digest: "sha256"
+mtls_client_filename: "client.pem"
+mtls_client_key_filename: "client.key"
+mtls_client_csr_filename: "client.csr"
+
+# =============================================================================
+# Generation Control
+# =============================================================================
+
+# Set to false to skip certificate generation (useful for BYO certs)
+mtls_generate_ca: true
+mtls_generate_server: true
+mtls_generate_client: true
+
+# Force regeneration even if certificates exist
+mtls_force_regenerate: false

@@ -1,0 +1,56 @@
+---
+name: Ansible Lint
+
+on:
+  workflow_call:
+    inputs:
+      ansible-version:
+        description: Ansible version to use
+        required: false
+        type: string
+        default: "2.16"
+      python-version:
+        description: Python version to use
+        required: false
+        type: string
+        default: "3.12"
+      ansible-paths:
+        description: Paths to lint (space-separated). If empty, runs ansible-lint with no explicit paths.
+        required: false
+        type: string
+        default: "defaults handlers meta tasks vars"
+  workflow_dispatch:
+    inputs:
+      ansible-version:
+        description: Ansible version to use
+        required: false
+        type: string
+        default: "2.16"
+      python-version:
+        description: Python version to use
+        required: false
+        type: string
+        default: "3.12"
+      ansible-paths:
+        description: Paths to lint (space-separated). If empty, runs ansible-lint with no explicit paths.
+        required: false
+        type: string
+        default: "defaults handlers meta tasks vars"
+
+jobs:
+  ansible-lint:
+    name: Ansible Lint
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+
+      - name: run-ansible-lint
+        uses: ansible/ansible-lint@7f6abc5ef97d0fb043a0f3d416dfbc74399fbda0 # v26.1.1
+        with:
+          args: -v ${{ inputs.ansible-paths }}
+          setup_python: "true"
+          python_version: ${{ inputs.python-version }}

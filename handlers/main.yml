@@ -1,0 +1,4 @@
+---
+# handlers/main.yml - mTLS Certificate Role Handlers
+# This role generates certificates but does not manage services.
+# Consuming roles should define their own handlers for service restarts.

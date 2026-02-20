@@ -1,0 +1,26 @@
+---
+# Molecule converge playbook - applies the mTLS certificate role to test instances
+
+- name: Converge
+  hosts: all
+  become: true
+
+  pre_tasks:
+    # Set default IPv4 address for Docker containers
+    - name: Set ansible_default_ipv4 fact for Docker containers
+      ansible.builtin.set_fact:
+        ansible_default_ipv4:
+          address: "{{ (ansible_facts['eth0']['ipv4']['address'] if (ansible_facts['eth0'] is defined and 'ipv4' in ansible_facts['eth0']) else (ansible_facts['default_ipv4']['address'] if (ansible_facts['default_ipv4'] is defined and 'address' in ansible_default_ipv4) else '127.0.0.1')) }}"
+      when: ansible_facts["virtualization_type"] == "docker"
+
+  roles:
+    - role: TrevorBenson.mtls_certs
+      vars:
+        # Test with shorter validity periods
+        mtls_ca_validity_days: 365
+        mtls_server_validity_days: 180
+        mtls_client_validity_days: 90
+        # Use test-specific CN values
+        mtls_ca_common_name: "test-ca.example.com"
+        mtls_server_common_name: "test-server.example.com"
+        mtls_client_common_name: "test-client.example.com"
