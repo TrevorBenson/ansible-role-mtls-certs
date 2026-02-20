@@ -3,7 +3,6 @@
 # Generates a self-signed CA, server certificate, and client certificate for mTLS
 
 
-
 # =============================================================================
 # Create certificate directories
 # =============================================================================
@@ -76,16 +75,18 @@
     - name: Build server SAN list
       ansible.builtin.set_fact:
         _mtls_server_san: >-
-          {%- set san_list = [] -%}
-          {%- if mtls_server_use_ansible_ip and ansible_default_ipv4 is defined and ansible_default_ipv4['address'] is defined -%}
-            {%- set _ = san_list.append('IP:' + ansible_default_ipv4['address']) -%}
-          {%- endif -%}
-          {%- for dns in ([mtls_server_common_name] + mtls_server_san_dns) -%}
-            {%- set _ = san_list.append('DNS:' + dns) -%}
-          {%- endfor -%}
-          {%- for ip in mtls_server_san_ip -%}
-            {%- set _ = san_list.append('IP:' + ip) -%}
-          {%- endfor -%}
+          {%- set san_list = [] %}
+          {%- if mtls_server_use_ansible_ip and
+                 ansible_default_ipv4 is defined and
+                 ansible_default_ipv4['address'] is defined %}
+            {%- set _ = san_list.append('IP:' + ansible_default_ipv4['address']) %}
+          {%- endif %}
+          {%- for dns in ([mtls_server_common_name] + mtls_server_san_dns) %}
+            {%- set _ = san_list.append('DNS:' + dns) %}
+          {%- endfor %}
+          {%- for ip in mtls_server_san_ip %}
+            {%- set _ = san_list.append('IP:' + ip) %}
+          {%- endfor %}
           {{ san_list | join(',') }}
 
     - name: Create server private key
@@ -191,3 +192,4 @@
       - "Client Certificate: {{ mtls_paths.client_pem }}"
       - "Client Key:         {{ mtls_paths.client_key }}"
       - "=========================================="
+

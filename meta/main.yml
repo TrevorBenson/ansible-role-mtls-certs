@@ -13,9 +13,6 @@ galaxy_info:
     - name: EL
       versions:
         - all
-    - name: Rocky
-      versions:
-        - all
     - name: Ubuntu
       versions:
         - jammy
