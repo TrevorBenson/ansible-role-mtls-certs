@@ -1,0 +1,78 @@
+---
+name: Role Structure Validation
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  validate-structure:
+    name: Validate Galaxy Role Structure
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible
+        run: pip install ansible-core
+
+      - name: Validate required directories
+        run: |
+          required_dirs=("tasks" "handlers" "vars" "defaults" "meta")
+          missing=()
+
+          for dir in "${required_dirs[@]}"; do
+            if [ ! -d "$dir" ]; then
+              missing+=("$dir")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "❌ Missing: ${missing[*]}"
+            exit 1
+          fi
+          echo "✅ All required directories present"
+
+      - name: Validate meta/main.yml
+        run: |
+          python3 << 'PYTHON'
+          import yaml, sys
+
+          try:
+              with open('meta/main.yml', 'r') as f:
+                  meta = yaml.safe_load(f)
+          except FileNotFoundError:
+              print("❌ Error: meta/main.yml not found")
+              sys.exit(1)
+          except yaml.YAMLError as e:
+              print(f"❌ YAML parsing error: {e}")
+              sys.exit(1)
+          except Exception as e:
+              print(f"❌ Unexpected error loading meta/main.yml: {e}")
+              sys.exit(1)
+
+          if meta is None or not isinstance(meta, dict):
+              print("❌ Error: meta/main.yml is empty or not a valid YAML dictionary")
+              sys.exit(1)
+
+          required = ['galaxy_info', 'dependencies']
+          galaxy_required = ['author', 'description', 'license', 'min_ansible_version']
+          errors = []
+          for field in required:
+              if field not in meta:
+                  errors.append(f"Missing: {field}")
+          if 'galaxy_info' in meta:
+              for field in galaxy_required:
+                  if field not in meta['galaxy_info']:
+                      errors.append(f"Missing galaxy_info.{field}")
+          if errors:
+              print("❌ Errors:", errors)
+              sys.exit(1)
+          print("✅ meta/main.yml valid")
+          PYTHON

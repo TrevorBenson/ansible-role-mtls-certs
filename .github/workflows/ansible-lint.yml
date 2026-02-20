@@ -18,7 +18,7 @@ on:
         description: Paths to lint (space-separated). If empty, runs ansible-lint with no explicit paths.
         required: false
         type: string
-        default: ""
+        default: "defaults handlers meta tasks vars"
   workflow_dispatch:
     inputs:
       ansible-version:
@@ -35,7 +35,7 @@ on:
         description: Paths to lint (space-separated). If empty, runs ansible-lint with no explicit paths.
         required: false
         type: string
-        default: ""
+        default: "defaults handlers meta tasks vars"
 
 jobs:
   ansible-lint:
@@ -48,25 +48,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+      - name: run-ansible-lint
+        uses: ansible/ansible-lint@7f6abc5ef97d0fb043a0f3d416dfbc74399fbda0 # v26.1.1
         with:
-          enable-cache: true
-
-      - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ inputs.python-version }}
-
-      - name: Install Ansible ${{ inputs.ansible-version }}
-        run: |
-          uv pip install --system ansible-core==${{ inputs.ansible-version }}.* ansible-lint
-
-      - name: Run ansible-lint
-        run: |
-          ansible-lint --version
-          if [ -z "${{ inputs.ansible-paths }}" ]; then
-            ansible-lint -v
-          else
-            ansible-lint ${{ inputs.ansible-paths }} -v
-          fi
+          args: -v ${{ inputs.ansible-paths }}
+          setup_python: "true"
+          python_version: ${{ inputs.python-version }}

@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   role_name: mtls_certs
-  namespace: trevorbenson
+  namespace: TrevorBenson
   author: TrevorBenson
   description: Generate self-signed mTLS certificate chains (CA, server, client) for mutual TLS authentication
 

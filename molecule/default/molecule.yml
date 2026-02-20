@@ -17,6 +17,7 @@ platforms:
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
     command: /sbin/init
+    cgroupns_mode: host
     networks:
       - name: molecule
     groups:
@@ -30,6 +31,7 @@ platforms:
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
     command: /sbin/init
+    cgroupns_mode: host
     networks:
       - name: molecule
     groups:
@@ -41,7 +43,6 @@ provisioner:
   config_options:
     defaults:
       interpreter_python: auto_silent
-      callbacks_enabled: profile_tasks, timer, yaml
       roles_path: "${MOLECULE_PROJECT_DIRECTORY}/..:~/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles"
   inventory:
     host_vars:
@@ -59,7 +60,6 @@ verifier:
 scenario:
   name: default
   test_sequence:
-    - dependency
     - destroy
     - syntax
     - create

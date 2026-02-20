@@ -17,10 +17,14 @@ on:
         type: string
         default: "3.12"
 
+defaults:
+  run:
+    working-directory: 'trevorbenson.mtls_certs'
+
 jobs:
   molecule:
     name: Molecule Tests
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -30,37 +34,28 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
         with:
-          enable-cache: true
+          path: 'trevorbenson.mtls_certs'
 
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      - name: Set up Python 3.
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
         with:
+          # Can't go to 3.14+ until Ansible 13.x
           python-version: ${{ inputs.python-version }}
 
-      - name: Install dependencies
+      - name: Install test dependencies.
         run: |
-          uv pip install --system -r requirements-dev.txt
+          pip3 install -r requirements-dev.txt
 
       - name: Install Ansible Galaxy requirements
         run: |
+          ansible-galaxy collection install ansible.posix
           ansible-galaxy collection install community.crypto
           ansible-galaxy collection install community.docker
+          ansible-galaxy collection install community.general
 
       - name: Run Molecule tests
-        run: molecule test --scenario-name ${{ matrix.scenario }}
+        run: molecule test --scenario-name ${{ matrix.scenario }} --report
         env:
           PY_COLORS: "1"
           ANSIBLE_FORCE_COLOR: "1"
-
-      - name: Upload Molecule logs on failure
-        if: failure()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: molecule-logs-${{ matrix.scenario }}
-          path: |
-            molecule/${{ matrix.scenario }}/.molecule/
-          retention-days: 7
